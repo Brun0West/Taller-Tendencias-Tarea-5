@@ -1,0 +1,110 @@
+# Extracto de registro: servidor de prueba; incluye piloto (192) y ronda final (384), en orden temporal.
+time=2026-11-15T16:24:31.829-05:00 level=INFO source=types.go:32 msg="inference compute" id=0 filter_id=0 library=Vulkan compute=0.0 name=Vulkan0 description="AMD Unknown (RADV GFX1102)" libdirs=ollama,vulkan driver=0.0 pci_id=0000:25:00.0 type=discrete total="8.0 GiB" available="6.8 GiB"
+llama_model_loader: - kv   2:                               general.name str              = Qwen2.5 3B Instruct
+print_info: model params          = 3.09 B
+print_info: general.name          = Qwen2.5 3B Instruct
+load_tensors: offloading output layer to GPU
+load_tensors: offloading 35 repeating layers to GPU
+load_tensors: offloaded 37/37 layers to GPU
+slot   load_model: id  0 | task -1 | new slot, n_ctx = 16384
+slot update_slots: id  0 | task 0 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11833
+slot      release: id  0 | task 0 | stop processing: n_tokens = 11877, truncated = 0
+slot update_slots: id  0 | task 57 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11833
+slot      release: id  0 | task 57 | stop processing: n_tokens = 11877, truncated = 0
+slot update_slots: id  0 | task 103 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11847
+slot      release: id  0 | task 103 | stop processing: n_tokens = 11916, truncated = 0
+slot update_slots: id  0 | task 174 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11841
+slot      release: id  0 | task 174 | stop processing: n_tokens = 11964, truncated = 0
+slot update_slots: id  0 | task 299 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11833
+slot      release: id  0 | task 299 | stop processing: n_tokens = 11877, truncated = 0
+slot update_slots: id  0 | task 345 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11847
+slot      release: id  0 | task 345 | stop processing: n_tokens = 11916, truncated = 0
+slot update_slots: id  0 | task 416 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11841
+slot      release: id  0 | task 416 | stop processing: n_tokens = 11964, truncated = 0
+slot update_slots: id  0 | task 541 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11833
+slot      release: id  0 | task 541 | stop processing: n_tokens = 11877, truncated = 0
+slot update_slots: id  0 | task 587 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11847
+slot      release: id  0 | task 587 | stop processing: n_tokens = 11916, truncated = 0
+slot update_slots: id  0 | task 658 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11841
+slot      release: id  0 | task 658 | stop processing: n_tokens = 11964, truncated = 0
+llama_model_loader: - kv   2:                               general.name str              = Llama 3.2 3B Instruct
+print_info: model params          = 3.21 B
+print_info: general.name          = Llama 3.2 3B Instruct
+load_tensors: offloading output layer to GPU
+load_tensors: offloading 27 repeating layers to GPU
+load_tensors: offloaded 29/29 layers to GPU
+slot   load_model: id  0 | task -1 | new slot, n_ctx = 16384
+slot update_slots: id  0 | task 0 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11517
+slot      release: id  0 | task 0 | stop processing: n_tokens = 11585, truncated = 0
+slot update_slots: id  0 | task 81 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11517
+slot      release: id  0 | task 81 | stop processing: n_tokens = 11585, truncated = 0
+slot update_slots: id  0 | task 151 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11529
+slot      release: id  0 | task 151 | stop processing: n_tokens = 11632, truncated = 0
+slot update_slots: id  0 | task 256 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11525
+slot      release: id  0 | task 256 | stop processing: n_tokens = 11716, truncated = 0
+slot update_slots: id  0 | task 449 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11517
+slot      release: id  0 | task 449 | stop processing: n_tokens = 11585, truncated = 0
+slot update_slots: id  0 | task 519 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11529
+slot      release: id  0 | task 519 | stop processing: n_tokens = 11632, truncated = 0
+slot update_slots: id  0 | task 624 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11525
+slot      release: id  0 | task 624 | stop processing: n_tokens = 11716, truncated = 0
+slot update_slots: id  0 | task 817 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11517
+slot      release: id  0 | task 817 | stop processing: n_tokens = 11585, truncated = 0
+slot update_slots: id  0 | task 887 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11529
+slot      release: id  0 | task 887 | stop processing: n_tokens = 11632, truncated = 0
+slot update_slots: id  0 | task 992 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11525
+slot      release: id  0 | task 992 | stop processing: n_tokens = 11716, truncated = 0
+llama_model_loader: - kv   2:                               general.name str              = Llama 3.2 3B Instruct
+print_info: model params          = 3.21 B
+print_info: general.name          = Llama 3.2 3B Instruct
+load_tensors: offloading output layer to GPU
+load_tensors: offloading 27 repeating layers to GPU
+load_tensors: offloaded 29/29 layers to GPU
+slot   load_model: id  0 | task -1 | new slot, n_ctx = 16384
+slot update_slots: id  0 | task 0 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11517
+slot      release: id  0 | task 0 | stop processing: n_tokens = 11585, truncated = 0
+slot update_slots: id  0 | task 81 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11517
+slot      release: id  0 | task 81 | stop processing: n_tokens = 11585, truncated = 0
+slot update_slots: id  0 | task 151 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11529
+slot      release: id  0 | task 151 | stop processing: n_tokens = 11632, truncated = 0
+slot update_slots: id  0 | task 256 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11525
+slot      release: id  0 | task 256 | stop processing: n_tokens = 11735, truncated = 0
+slot update_slots: id  0 | task 468 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11517
+slot      release: id  0 | task 468 | stop processing: n_tokens = 11585, truncated = 0
+slot update_slots: id  0 | task 538 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11529
+slot      release: id  0 | task 538 | stop processing: n_tokens = 11632, truncated = 0
+slot update_slots: id  0 | task 643 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11525
+slot      release: id  0 | task 643 | stop processing: n_tokens = 11735, truncated = 0
+slot update_slots: id  0 | task 855 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11517
+slot      release: id  0 | task 855 | stop processing: n_tokens = 11585, truncated = 0
+slot update_slots: id  0 | task 925 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11529
+slot      release: id  0 | task 925 | stop processing: n_tokens = 11632, truncated = 0
+slot update_slots: id  0 | task 1030 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11525
+slot      release: id  0 | task 1030 | stop processing: n_tokens = 11735, truncated = 0
+llama_model_loader: - kv   2:                               general.name str              = Qwen2.5 3B Instruct
+print_info: model params          = 3.09 B
+print_info: general.name          = Qwen2.5 3B Instruct
+load_tensors: offloading output layer to GPU
+load_tensors: offloading 35 repeating layers to GPU
+load_tensors: offloaded 37/37 layers to GPU
+slot   load_model: id  0 | task -1 | new slot, n_ctx = 16384
+slot update_slots: id  0 | task 0 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11833
+slot      release: id  0 | task 0 | stop processing: n_tokens = 11877, truncated = 0
+slot update_slots: id  0 | task 57 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11833
+slot      release: id  0 | task 57 | stop processing: n_tokens = 11877, truncated = 0
+slot update_slots: id  0 | task 103 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11847
+slot      release: id  0 | task 103 | stop processing: n_tokens = 11916, truncated = 0
+slot update_slots: id  0 | task 174 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11841
+slot      release: id  0 | task 174 | stop processing: n_tokens = 11964, truncated = 0
+slot update_slots: id  0 | task 299 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11833
+slot      release: id  0 | task 299 | stop processing: n_tokens = 11877, truncated = 0
+slot update_slots: id  0 | task 345 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11847
+slot      release: id  0 | task 345 | stop processing: n_tokens = 11916, truncated = 0
+slot update_slots: id  0 | task 416 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11841
+slot      release: id  0 | task 416 | stop processing: n_tokens = 11964, truncated = 0
+slot update_slots: id  0 | task 541 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11833
+slot      release: id  0 | task 541 | stop processing: n_tokens = 11877, truncated = 0
+slot update_slots: id  0 | task 587 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11847
+slot      release: id  0 | task 587 | stop processing: n_tokens = 11916, truncated = 0
+slot update_slots: id  0 | task 658 | new prompt, n_ctx_slot = 16384, n_keep = 4, task.n_tokens = 11841
+slot      release: id  0 | task 658 | stop processing: n_tokens = 11964, truncated = 0

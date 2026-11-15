@@ -1,0 +1,25 @@
+{
+  "fecha_local": "2026-11-15T16:30:03.952429-05:00",
+  "ram_total_bytes": 16682803200,
+  "swap_total_bytes": 0,
+  "gpu": [
+    {
+      "pci": "0000:25:00.0",
+      "vram_total_bytes": 8573157376,
+      "pci_vendor": "0x1002",
+      "pci_device": "0x7480"
+    }
+  ],
+  "gpu_identificacion": "25:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Navi 33 [Radeon RX 7600/7600 XT/7600M XT/7600S/7700S / PRO W7600] [1002:7480] (rev cf)\n\tSubsystem: XFX Limited Device [1eae:7601]\n\tKernel driver in use: amdgpu\n\tKernel modules: amdgpu\n",
+  "disk_free_bytes": 2333552640,
+  "modelo_storage": "/dev/shm/fisi-benchmark-models (tmpfs temporal; solo un modelo a la vez)",
+  "ollama_url": "http://127.0.0.1:11435",
+  "ollama_servidor_adicional": true,
+  "ollama_config": {
+    "OLLAMA_NUM_PARALLEL": 1,
+    "OLLAMA_MAX_LOADED_MODELS": 1,
+    "OLLAMA_VULKAN": "true (valor efectivo en registro del servidor)"
+  },
+  "python": "3.10.12",
+  "repo_commit_base": "da0fb583d57e5258e5a918a37c7597b0328100ac"
+}
