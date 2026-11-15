@@ -1,0 +1,55 @@
+---
+config:
+  layout: elk
+---
+flowchart TB
+  subgraph CAPA_APP["1. Capa de Presentación (Clientes Web)"]
+    WEB["Aplicación Web FISI (20 Usuarios Concurrentes)<br><i>(React / Next.js en navegadores de alumnos y docentes)</i>"]
+  end
+
+  subgraph CAPA_GW["2. Capa de Gateway y Seguridad"]
+    PROXY["Reverse Proxy / Load Balancer<br><i>(Nginx / Caddy - TLS, Rate Limiting, CORS)</i>"]
+  end
+
+  subgraph CAPA_ORQ["3. Capa de Lógica de Negocio (Backend API)"]
+    FASTAPI["Backend Orquestador (FastAPI)<br><i>(Gestión de sesiones, historial y ensamblado de prompt)</i>"]
+    KB_MEM[("Base de Conocimientos en Caché RAM<br><i>(Textos estructurados de Sílabos y Reglamento)</i>")]
+  end
+
+  subgraph CAPA_INF["4. Capa de Inferencia de Alto Rendimiento (vLLM)"]
+    VLLM_API["Servidor API Compatible OpenAI<br><i>(Batching continuo / Async Engine)</i>"]
+    SCHED["Continuous Batching & PagedAttention<br><i>(Gestión dinámica de 20 secuencias simultáneas)</i>"]
+    APC["Automatic Prefix Caching (APC)<br><i>(Reutiliza el KV Cache de la Base de Conocimientos)</i>"]
+    
+    subgraph GPU_SERVER["Infraestructura Dedicada (Servidor FISI)"]
+      GPU_DED["GPU Dedicada (24 GB VRAM - ej. RTX 4090 / L4)<br><i>(100% de pesos + KV Cache compartido en VRAM)</i>"]
+    end
+  end
+
+  subgraph CAPA_STORE["5. Capa de Almacenamiento"]
+    NVME_PROD["Almacenamiento NVMe Empresarial<br><i>(Pesos Qwen2.5-3B / 7B FP16 o AWQ .safetensors)</i>"]
+  end
+
+  WEB -- "1. 20 peticiones HTTPS simultáneas" --> PROXY
+  PROXY -- "2. Enruta tráfico validado" --> FASTAPI
+  KB_MEM -- "3. Inyecta prefijo estático (KB)" --> FASTAPI
+  FASTAPI -- "4. Envía lote de prompts (HTTP/2)" --> VLLM_API
+  VLLM_API --> SCHED
+  SCHED <--> APC
+  APC -- "5. Ejecución paralela por lotes" --> GPU_DED
+  NVME_PROD -. "Carga única de tensores en VRAM" .-> GPU_DED
+  GPU_DED -- "6. Streaming paralelo de tokens" --> VLLM_API
+  VLLM_API -- "7. Multiplexación SSE" --> FASTAPI
+  FASTAPI -- "8. Respuestas simultáneas a cada cliente" --> WEB
+
+  classDef clientStyle fill:#F8FAFC,stroke:#3B82F6,stroke-width:2px,color:#1E293B
+  classDef gwStyle fill:#F3E8FF,stroke:#9333EA,stroke-width:2px,color:#1E293B
+  classDef orqStyle fill:#FEF9C3,stroke:#CA8A04,stroke-width:2px,color:#1E293B
+  classDef engineStyle fill:#F0FDF4,stroke:#16A34A,stroke-width:2px,color:#1E293B
+  classDef storageStyle fill:#FEF2F2,stroke:#DC2626,stroke-width:2px,color:#1E293B
+
+  class WEB clientStyle
+  class PROXY gwStyle
+  class FASTAPI,KB_MEM orqStyle
+  class VLLM_API,SCHED,APC,GPU_DED engineStyle
+  class NVME_PROD storageStyle
