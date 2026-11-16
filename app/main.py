@@ -11,12 +11,12 @@ import time
 from collections import deque
 from contextlib import aclosing, asynccontextmanager
 from pathlib import Path
-from typing import Annotated, AsyncIterator
+from typing import Annotated, AsyncIterator, Literal
 
 import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
-from pydantic import BaseModel, StringConstraints
+from pydantic import BaseModel, Field, StringConstraints
 
 from . import hardware, modelos
 from .prompt import build_system_prompt
@@ -36,6 +36,9 @@ OPTIONS = {
     "temperature": float(os.getenv("TEMPERATURE", "0")),
 }
 WARMUP_QUESTION = "Hola"
+# La base ocupa ~12k de los 16k tokens de contexto: del historial solo se
+# envían los turnos más recientes que quepan en este presupuesto (~1,7k tokens).
+HISTORY_CHARS = int(os.getenv("HISTORIAL_CARACTERES", "6000"))
 
 ModelName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
 
@@ -55,11 +58,33 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Asistente Académico FISI", lifespan=lifespan)
 
 
+class Turno(BaseModel):
+    rol: Literal["usuario", "asistente"]
+    texto: Annotated[str, StringConstraints(max_length=8000)]
+
+
 class Pregunta(BaseModel):
     pregunta: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)]
     modelo: ModelName | None = None
+    historial: Annotated[list[Turno], Field(max_length=40)] = []  # turnos previos de la conversación
     stream: bool = False
 
+
+def history_messages(turns: list[Turno]) -> list[dict]:
+    """Últimos turnos que caben en HISTORY_CHARS, empezando por una pregunta del usuario."""
+    kept, used = [], 0
+    for turn in reversed(turns):
+        if not turn.texto.strip():
+            continue
+        used += len(turn.texto)
+        if used > HISTORY_CHARS:
+            break
+        kept.append(turn)
+    kept.reverse()
+    while kept and kept[0].rol != "usuario":
+        kept.pop(0)
+    roles = {"usuario": "user", "asistente": "assistant"}
+    return [{"role": roles[t.rol], "content": t.texto} for t in kept]
 
 
 class Precarga(BaseModel):
@@ -132,7 +157,9 @@ def metrics(final: dict, ttft: float | None, num_ctx: int) -> dict:
     }
 
 
-async def open_ollama_stream(pregunta: str, model: str, show: dict, num_predict: int | None = None) -> httpx.Response:
+async def open_ollama_stream(
+    pregunta: str, model: str, show: dict, history: list[dict] = (), num_predict: int | None = None,
+) -> httpx.Response:
     # Se relee en cada petición para tomar los cambios de la base sin reiniciar.
     knowledge = KNOWLEDGE_FILE.read_text(encoding="utf-8")
     params = modelos.chat_params(show, OPTIONS)
@@ -140,8 +167,10 @@ async def open_ollama_stream(pregunta: str, model: str, show: dict, num_predict:
         params["options"] = {**params["options"], "num_predict": num_predict}
     body = {
         "model": model,
+        # La base va primero y siempre igual: así Ollama reutiliza su caché aunque cambie el historial.
         "messages": [
             {"role": "system", "content": build_system_prompt(knowledge)},
+            *history,
             {"role": "user", "content": pregunta},
         ],
         "stream": True,
@@ -165,7 +194,9 @@ async def open_ollama_stream(pregunta: str, model: str, show: dict, num_predict:
     return response
 
 
-async def events(response: httpx.Response, started: float, record: bool = True) -> AsyncIterator[dict]:
+async def events(
+    response: httpx.Response, started: float, record: bool = True, extra: dict | None = None,
+) -> AsyncIterator[dict]:
     """Traduce el stream de Ollama a eventos {razonamiento} / {texto} / {metricas} / {error}."""
     ttft = None
     try:
@@ -177,7 +208,7 @@ async def events(response: httpx.Response, started: float, record: bool = True) 
                 yield {"error": chunk["error"]}
                 return
             if chunk.get("done"):
-                final = metrics(chunk, ttft, OPTIONS["num_ctx"])
+                final = {**metrics(chunk, ttft, OPTIONS["num_ctx"]), **(extra or {})}
                 if record:
                     app.state.history.append({**final, "hora": time.time()})
                 yield {"metricas": final}
@@ -199,22 +230,25 @@ async def preguntar(p: Pregunta):
     """Responde con la base de conocimiento completa en el contexto.
 
     modelo: cualquiera de los instalados (GET /modelos); por defecto MODELO.
+    historial: turnos previos [{"rol": "usuario"|"asistente", "texto"}] para preguntas de seguimiento.
     stream=false (por defecto): JSON {"respuesta", "razonamiento", "metricas"}.
     stream=true: NDJSON, una línea por evento {"razonamiento"} / {"texto"} y al final {"metricas"}.
     """
     started = time.perf_counter()
     model, show = await resolve_model(p.modelo)
-    response = await open_ollama_stream(p.pregunta, model, show)
+    history = history_messages(p.historial)
+    response = await open_ollama_stream(p.pregunta, model, show, history)
+    extra = {"turnos_historial": len(history)}
 
     if p.stream:
         async def ndjson():
-            async for event in events(response, started):
+            async for event in events(response, started, extra=extra):
                 yield json.dumps(event, ensure_ascii=False) + "\n"
 
         return StreamingResponse(ndjson(), media_type="application/x-ndjson")
 
     parts, thoughts, final = [], [], {}
-    async with aclosing(events(response, started)) as stream:
+    async with aclosing(events(response, started, extra=extra)) as stream:
         async for event in stream:
             if "error" in event:
                 raise HTTPException(502, f"Error de Ollama: {event['error']}")
