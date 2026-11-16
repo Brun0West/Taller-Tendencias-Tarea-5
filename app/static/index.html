@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<title>Asistente Académico FISI</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%238b5cf6'/%3E%3Cstop offset='.5' stop-color='%23ec4899'/%3E%3Cstop offset='1' stop-color='%2322d3ee'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='16' cy='16' r='15' fill='url(%23g)'/%3E%3Ccircle cx='12' cy='11' r='5' fill='%23fff' opacity='.7'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  @property --angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+
+  :root {
+    --bg: #07070d;
+    --text: #ecebf5;
+    --strong: #ffffff;
+    --muted: #a3a1b8;
+    --faint: #6f6c87;
+    --glass: rgba(255, 255, 255, .055);
+    --glass-hover: rgba(255, 255, 255, .09);
+    --glass-border: rgba(255, 255, 255, .11);
+    --glass-highlight: rgba(255, 255, 255, .12);
+    --shadow: 0 12px 40px -12px rgba(0, 0, 0, .65);
+    --c1: #8b5cf6; --c2: #ec4899; --c3: #f59e0b; --c4: #22d3ee;
+    --ok: #34d399; --warn: #fbbf24; --bad: #f87171;
+    --blob: .5;
+    --grid: rgba(255, 255, 255, .035);
+    --code: rgba(255, 255, 255, .09);
+    --stops: var(--c1), var(--c2), var(--c3), var(--c4), var(--c1);
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f3f1fa;
+      --text: #22203a;
+      --strong: #0f0d22;
+      --muted: #5f5c78;
+      --faint: #8d8aa6;
+      --glass: rgba(255, 255, 255, .55);
+      --glass-hover: rgba(255, 255, 255, .75);
+      --glass-border: rgba(255, 255, 255, .85);
+      --glass-highlight: rgba(255, 255, 255, .9);
+      --shadow: 0 12px 40px -14px rgba(70, 40, 140, .28);
+      --blob: .32;
+      --grid: rgba(40, 20, 90, .045);
+      --code: rgba(34, 32, 58, .07);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex; flex-direction: column;
+    font: 15.5px/1.6 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--text); background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; }
+  svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ---------- Fondo aurora ---------- */
+  .aurora { position: fixed; inset: 0; z-index: -1; overflow: hidden; background: var(--bg); }
+  .aurora span {
+    position: absolute; width: 62vmax; height: 62vmax; border-radius: 50%;
+    filter: blur(100px); opacity: var(--blob); will-change: transform;
+    animation: drift 28s ease-in-out infinite alternate; transition: opacity 1.2s ease;
+  }
+  .aurora span:nth-child(1) { background: var(--c1); top: -28vmax; left: -18vmax; }
+  .aurora span:nth-child(2) { background: var(--c2); bottom: -34vmax; right: -22vmax; animation-duration: 34s; animation-delay: -9s; }
+  .aurora span:nth-child(3) { background: var(--c4); top: 32%; left: 40%; width: 38vmax; height: 38vmax; opacity: calc(var(--blob) * .55); animation-duration: 40s; animation-delay: -17s; }
+  .aurora::after {
+    content: ""; position: absolute; inset: 0;
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 46px 46px;
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 20%, transparent 75%);
+  }
+  body.busy .aurora span:nth-child(1), body.busy .aurora span:nth-child(2) { opacity: calc(var(--blob) * 1.35); }
+  @keyframes drift {
+    0%   { transform: translate(0, 0) scale(1); }
+    50%  { transform: translate(7vmax, 5vmax) scale(1.12); }
+    100% { transform: translate(-5vmax, 7vmax) scale(.94); }
+  }
+
+  /* ---------- Vidrio y anillo de color ---------- */
+  .glass {
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(22px) saturate(160%); backdrop-filter: blur(22px) saturate(160%);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow), inset 0 1px 0 var(--glass-highlight);
+  }
+  .ring { position: relative; }
+  .ring::before {
+    content: ""; position: absolute; inset: -1px; padding: 1.5px; border-radius: inherit;
+    background: conic-gradient(from var(--angle), var(--stops)); opacity: 0; pointer-events: none;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+    transition: opacity .4s ease; animation: spin 5s linear infinite;
+  }
+  @keyframes spin { to { --angle: 360deg; } }
+
+  /* ---------- Barra superior ---------- */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    width: min(980px, calc(100% - 24px)); margin: 12px auto 0; padding: 10px 12px 10px 14px; border-radius: 18px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .brand > div { min-width: 0; }
+  .brand h1 { margin: 0; overflow: hidden; font-size: .98rem; font-weight: 650; letter-spacing: -.01em; color: var(--strong); text-overflow: ellipsis; white-space: nowrap; }
+  .brand p { margin: 0; font-size: .78rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .top-actions { display: flex; align-items: center; gap: 8px; }
+  .status {
+    display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px;
+    font-size: .78rem; font-weight: 500; color: var(--muted); white-space: nowrap;
+    background: var(--glass); border: 1px solid var(--glass-border);
+  }
+  .status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+  .status[data-state="ok"] .dot { background: var(--ok); box-shadow: 0 0 0 0 var(--ok); animation: beacon 2.4s ease-out infinite; }
+  .status[data-state="idle"] .dot { background: var(--warn); }
+  .status[data-state="off"] .dot { background: var(--bad); }
+  @keyframes beacon { 0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, .55); } 100% { box-shadow: 0 0 0 9px rgba(52, 211, 153, 0); } }
+  .icon-btn {
+    display: inline-grid; place-items: center; width: 34px; height: 34px; padding: 0; border-radius: 10px;
+    border: 1px solid transparent; background: transparent; color: var(--muted); cursor: pointer;
+    transition: background .2s, color .2s, border-color .2s;
+  }
+  .icon-btn:hover { background: var(--glass-hover); border-color: var(--glass-border); color: var(--strong); }
+  .icon-btn svg { width: 16px; height: 16px; }
+
+  /* ---------- Orbe (marca y avatar del asistente) ---------- */
+  .orb {
+    --size: 32px; position: relative; flex: none; width: var(--size); height: var(--size); border-radius: 50%;
+    background: conic-gradient(from var(--angle), var(--stops)); box-shadow: 0 0 22px -4px rgba(139, 92, 246, .75);
+  }
+  .orb::after {
+    content: ""; position: absolute; inset: 22%; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, .95), rgba(255, 255, 255, .25) 45%, transparent 70%);
+  }
+  .orb.xl { --size: 64px; margin: 0 auto 22px; animation: spin 9s linear infinite, float 6s ease-in-out infinite; }
+  @keyframes float { 50% { transform: translateY(-6px); box-shadow: 0 0 40px -2px rgba(236, 72, 153, .7); } }
+  @keyframes pulse { 50% { transform: scale(1.14); box-shadow: 0 0 34px 0 rgba(236, 72, 153, .7); } }
+
+  /* ---------- Conversación ---------- */
+  main { flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--glass-border) transparent; }
+  #chat { width: min(820px, 100%); margin: 0 auto; padding: 28px 16px 12px; }
+
+  .hero { padding: 7vh 0 16px; text-align: center; animation: rise .6s ease-out both; }
+  .hero h2 { margin: 0 0 10px; font-size: clamp(1.7rem, 4.4vw, 2.5rem); line-height: 1.15; font-weight: 700; letter-spacing: -.03em; color: var(--strong); }
+  .grad {
+    background: linear-gradient(100deg, var(--c1), var(--c2) 45%, var(--c3) 75%, var(--c4));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero > p { max-width: 520px; margin: 0 auto 30px; color: var(--muted); }
+  .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; text-align: left; }
+  .card-q {
+    display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 18px; text-align: left;
+    cursor: pointer; transition: transform .25s ease, background .25s ease;
+    animation: rise .6s ease-out both;
+  }
+  .card-q:nth-child(2) { animation-delay: .06s; } .card-q:nth-child(3) { animation-delay: .12s; } .card-q:nth-child(4) { animation-delay: .18s; }
+  .card-q:hover:not(:disabled) { transform: translateY(-2px); background: var(--glass-hover); }
+  .card-q:hover:not(:disabled)::before { opacity: .9; }
+  .card-q:disabled { opacity: .5; cursor: default; }
+  .card-q .ico {
+    display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 10px; color: #fff;
+    background: linear-gradient(135deg, var(--a), var(--b)); box-shadow: 0 6px 16px -6px var(--a);
+  }
+  .card-q strong { display: block; font-size: .9rem; font-weight: 600; color: var(--strong); }
+  .card-q span.q { display: block; font-size: .84rem; color: var(--muted); line-height: 1.45; }
+
+  .msg { display: flex; gap: 12px; margin: 0 0 22px; animation: rise .35s ease-out both; }
+  .msg.user { justify-content: flex-end; }
+  .bubble {
+    max-width: 82%; padding: 11px 16px; border-radius: 20px 20px 6px 20px; color: #fff;
+    background: linear-gradient(135deg, rgba(139, 92, 246, .92), rgba(236, 72, 153, .88));
+    box-shadow: 0 10px 30px -12px rgba(236, 72, 153, .7), inset 0 1px 0 rgba(255, 255, 255, .25);
+    white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  .msg.bot .orb { margin-top: 4px; }
+  .msg.bot[data-state="thinking"] .orb { animation: spin 2.2s linear infinite, pulse 1.6s ease-in-out infinite; }
+  .msg.bot[data-state="writing"] .orb { animation: spin .9s linear infinite; }
+  .answer { flex: 1; min-width: 0; padding: 14px 18px; border-radius: 6px 20px 20px 20px; }
+  .msg.bot[data-state="thinking"] .answer::before,
+  .msg.bot[data-state="writing"] .answer::before { opacity: 1; animation-duration: 2.5s; }
+  .msg.bot[data-state="error"] .answer { border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
+
+  .thinking { display: none; align-items: center; gap: 10px; min-height: 26px; }
+  .msg.bot[data-state="thinking"] .thinking { display: flex; }
+  .shimmer {
+    font-weight: 500;
+    background: linear-gradient(90deg, var(--faint) 0%, var(--strong) 45%, var(--faint) 90%);
+    background-size: 220% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: shimmer 1.8s linear infinite;
+  }
+  @keyframes shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+  .dots { display: inline-flex; gap: 4px; }
+  .dots i { width: 6px; height: 6px; border-radius: 50%; background: linear-gradient(135deg, var(--c1), var(--c2)); animation: hop 1.2s ease-in-out infinite; }
+  .dots i:nth-child(2) { animation-delay: .15s; } .dots i:nth-child(3) { animation-delay: .3s; }
+  @keyframes hop { 0%, 60%, 100% { transform: translateY(0); opacity: .45; } 30% { transform: translateY(-5px); opacity: 1; } }
+  .elapsed { margin-left: auto; font-size: .75rem; color: var(--faint); font-variant-numeric: tabular-nums; }
+
+  .md { overflow-wrap: anywhere; }
+  .md > :first-child { margin-top: 0; } .md > :last-child { margin-bottom: 0; }
+  .md p { margin: .55em 0; }
+  .md h4 { margin: .9em 0 .35em; font-size: .98rem; color: var(--strong); }
+  .md ul, .md ol { margin: .45em 0; padding-left: 1.35em; }
+  .md li { margin: .22em 0; } .md li::marker { color: var(--c2); }
+  .md strong { color: var(--strong); font-weight: 650; }
+  .md code { padding: .1em .4em; border-radius: 6px; background: var(--code); font: .88em ui-monospace, "JetBrains Mono", monospace; }
+  .caret {
+    display: inline-block; width: .5em; height: 1.05em; margin-left: 3px; vertical-align: -.16em; border-radius: 2px;
+    background: linear-gradient(180deg, var(--c1), var(--c2)); box-shadow: 0 0 10px var(--c2);
+    animation: blink 1s ease-in-out infinite;
+  }
+  @keyframes blink { 50% { opacity: .15; } }
+
+  .foot { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--glass-border); }
+  .foot[hidden] { display: none; }
+  .meta { font-size: .74rem; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .foot .icon-btn { margin-left: auto; width: 30px; height: 30px; }
+  .error-text { margin-top: 8px; color: var(--bad); font-size: .9rem; }
+
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+
+  /* ---------- Caja de pregunta ---------- */
+  .composer { padding: 10px 16px max(14px, env(safe-area-inset-bottom)); }
+  .composer-inner { position: relative; width: min(820px, 100%); margin: 0 auto; }
+  .glow {
+    position: absolute; inset: 4px 10px; border-radius: 30px; background: conic-gradient(from var(--angle), var(--stops));
+    filter: blur(26px); opacity: 0; transition: opacity .5s ease; animation: spin 5s linear infinite; pointer-events: none;
+  }
+  .composer-inner:focus-within .glow { opacity: .45; }
+  body.busy .glow { opacity: .4; animation-duration: 2s; }
+  .field { display: flex; align-items: flex-end; gap: 10px; padding: 8px 8px 8px 20px; border-radius: 28px; }
+  .composer-inner:focus-within .field::before, body.busy .field::before { opacity: 1; }
+  body.busy .field::before { animation-duration: 2s; }
+  textarea {
+    flex: 1; max-height: 200px; padding: 9px 0; border: 0; outline: 0; resize: none;
+    background: transparent; color: var(--strong); font: inherit; line-height: 1.5;
+  }
+  textarea::placeholder { color: var(--faint); }
+  textarea:placeholder-shown { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  #send {
+    display: grid; place-items: center; flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%; cursor: pointer; color: #fff;
+    background: linear-gradient(135deg, var(--c1), var(--c2));
+    box-shadow: 0 8px 22px -8px var(--c2), inset 0 1px 0 rgba(255, 255, 255, .35);
+    transition: transform .2s ease, opacity .2s ease, filter .2s ease;
+  }
+  #send:hover:not(:disabled) { transform: scale(1.06); filter: brightness(1.1); }
+  #send:disabled { opacity: .35; cursor: default; box-shadow: none; }
+  #send .stop { display: none; } body.busy #send .stop { display: block; } body.busy #send .go { display: none; }
+  #send .stop rect { fill: currentColor; stroke: none; }
+  .hint { width: min(820px, 100%); margin: 8px auto 0; font-size: .72rem; color: var(--faint); text-align: center; }
+  kbd { padding: 1px 5px; border-radius: 5px; border: 1px solid var(--glass-border); background: var(--glass); font: inherit; }
+
+  @media (max-width: 640px) {
+    .cards { grid-template-columns: 1fr; }
+    .brand p, .status .label, .hint .keys { display: none; }
+    .status { padding: 8px; }
+    .bubble { max-width: 90%; }
+    .msg.bot .orb { --size: 26px; }
+    .answer { padding: 12px 14px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+<div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+
+<header class="topbar glass">
+  <div class="brand">
+    <div class="orb" aria-hidden="true"></div>
+    <div>
+      <h1>Asistente Académico FISI</h1>
+      <p>UNMSM · Matrícula, calendario, reglamento y sílabos</p>
+    </div>
+  </div>
+  <div class="top-actions">
+    <span class="status" id="status" data-state="checking" title="Estado del modelo">
+      <span class="dot"></span><span class="label">Conectando…</span>
+    </span>
+    <button class="icon-btn" id="reset" type="button" title="Nueva consulta" aria-label="Nueva consulta">
+      <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="scroll">
+  <div id="chat" aria-live="polite" aria-relevant="additions">
+    <section class="hero" id="hero">
+      <div class="orb xl" aria-hidden="true"></div>
+      <h2><span class="grad">¿Qué quieres saber</span><br>sobre la FISI?</h2>
+      <p>Pregunta en lenguaje natural. Las respuestas salen de la base de conocimiento de la facultad, procesada por un modelo local.</p>
+      <div class="cards">
+        <button class="card-q glass ring" type="button" style="--a:#8b5cf6;--b:#6366f1" data-q="¿Cuántos créditos puede llevar un estudiante regular por semestre?">
+          <span class="ico"><svg viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg></span>
+          <span><strong>Matrícula</strong><span class="q">¿Cuántos créditos puede llevar un estudiante regular por semestre?</span></span>
+        </button>
+        <button class="card-q glass ring" type="button" style="--a:#ec4899;--b:#f43f5e" data-q="¿Cuándo inicia el semestre 2026-II y cuándo es la matrícula regular?">
+          <span class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
+          <span><strong>Calendario 2026-II</strong><span class="q">¿Cuándo inicia el semestre y cuándo es la matrícula regular?</span></span>
+        </button>
+        <button class="card-q glass ring" type="button" style="--a:#f59e0b;--b:#f97316" data-q="¿Cuál es la fórmula de evaluación de Tendencias de Arquitectura de Software?">
+          <span class="ico"><svg viewBox="0 0 24 24"><path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2Z"/><path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7Z"/></svg></span>
+          <span><strong>Sílabos</strong><span class="q">¿Cuál es la fórmula de evaluación de Tendencias de Arquitectura de Software?</span></span>
+        </button>
+        <button class="card-q glass ring" type="button" style="--a:#22d3ee;--b:#3b82f6" data-q="¿Qué pasa si desapruebo la misma asignatura varias veces?">
+          <span class="ico"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></span>
+          <span><strong>Reglamento</strong><span class="q">¿Qué pasa si desapruebo la misma asignatura varias veces?</span></span>
+        </button>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="composer">
+  <div class="composer-inner">
+    <div class="glow" aria-hidden="true"></div>
+    <form class="field glass ring" id="form">
+      <textarea id="q" rows="1" maxlength="1000" placeholder="Pregunta sobre matrícula, calendario, sílabos…" aria-label="Tu pregunta" autofocus></textarea>
+      <button type="submit" id="send" aria-label="Enviar" disabled>
+        <svg class="go" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        <svg class="stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>
+      </button>
+    </form>
+  </div>
+  <p class="hint"><span class="keys"><kbd>Enter</kbd> envía · <kbd>Shift</kbd>+<kbd>Enter</kbd> nueva línea · </span>Confirma los datos importantes en los canales oficiales de la FISI.</p>
+</footer>
+
+<template id="bot-template">
+  <article class="msg bot" data-state="thinking" aria-busy="true">
+    <div class="orb" aria-hidden="true"></div>
+    <div class="answer glass ring">
+      <div class="thinking"><span class="shimmer"></span><span class="dots"><i></i><i></i><i></i></span><span class="elapsed"></span></div>
+      <div class="content md"></div>
+      <div class="foot" hidden>
+        <span class="meta"></span>
+        <button class="icon-btn copy" type="button" title="Copiar respuesta" aria-label="Copiar respuesta">
+          <svg class="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+      </div>
+    </div>
+  </article>
+</template>
+
+<script>
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const chat = $('#chat'), scroller = $('#scroll'), form = $('#form'), q = $('#q'), send = $('#send');
+  const hero = $('#hero'), statusEl = $('#status');
+  const CHECK = '<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>';
+  let controller = null;      // AbortController de la respuesta en curso
+  let modelLoaded = false;    // según /estado: si el modelo ya está en memoria
+
+  /* ---------- Estado del modelo (indicador superior) ---------- */
+  async function refreshStatus() {
+    try {
+      const s = await (await fetch('/estado')).json();
+      modelLoaded = s.cargado;
+      if (!s.ollama) return setStatus('off', 'Ollama desconectado');
+      if (!s.cargado) return setStatus('idle', `${s.modelo} · en espera`);
+      const where = s.gpu >= 0.99 ? 'GPU' : s.gpu > 0 ? `GPU ${Math.round(s.gpu * 100)}%` : 'CPU';
+      setStatus('ok', `${s.modelo} · ${where}`);
+    } catch {
+      setStatus('off', 'Servidor desconectado');
+    }
+  }
+  function setStatus(state, text) {
+    statusEl.dataset.state = state;
+    $('.label', statusEl).textContent = text;
+  }
+
+  /* ---------- Markdown mínimo y seguro: se construye con nodos DOM, nunca innerHTML ---------- */
+  function inline(parent, text) {
+    const re = /\*\*(.+?)\*\*|`([^`]+)`|\*([^*\s](?:[^*]*[^*\s])?)\*/g;
+    let last = 0, m;
+    while ((m = re.exec(text))) {
+      if (m.index > last) parent.append(text.slice(last, m.index));
+      const el = document.createElement(m[1] != null ? 'strong' : m[2] != null ? 'code' : 'em');
+      el.textContent = m[1] ?? m[2] ?? m[3];
+      parent.append(el);
+      last = re.lastIndex;
+    }
+    if (last < text.length) parent.append(text.slice(last));
+  }
+
+  function renderMarkdown(target, text, withCaret) {
+    const frag = document.createDocumentFragment();
+    let list = null, para = null;
+    for (const raw of text.split('\n')) {
+      const line = raw.trim();
+      if (!line) { list = para = null; continue; }
+      const heading = line.match(/^#{1,4}\s+(.*)$/);
+      if (heading) {
+        list = para = null;
+        const h = document.createElement('h4');
+        inline(h, heading[1]);
+        frag.append(h);
+        continue;
+      }
+      const ul = line.match(/^[-*•]\s+(.*)$/), ol = line.match(/^(\d+)[.)]\s+(.*)$/);
+      if (ul || ol) {
+        const tag = ul ? 'UL' : 'OL';
+        para = null;
+        if (!list || list.tagName !== tag) {
+          list = document.createElement(tag);
+          if (ol) list.start = Number(ol[1]);
+          frag.append(list);
+        }
+        const li = document.createElement('li');
+        inline(li, ul ? ul[1] : ol[2]);
+        list.append(li);
+        continue;
+      }
+      list = null;
+      if (para) para.append(document.createElement('br'));
+      else { para = document.createElement('p'); frag.append(para); }
+      inline(para, line);
+    }
+    target.replaceChildren(frag);
+    if (withCaret) {
+      let host = target.lastElementChild ?? target;
+      if (host.matches('ul, ol')) host = host.lastElementChild;
+      const caret = document.createElement('span');
+      caret.className = 'caret';
+      host.append(caret);
+    }
+  }
+
+  /* ---------- Mensajes ---------- */
+  const nearBottom = () => scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 140;
+  const toBottom = () => { scroller.scrollTop = scroller.scrollHeight; };
+
+  function addUser(text) {
+    const art = document.createElement('article');
+    art.className = 'msg user';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = text;
+    art.append(bubble);
+    chat.append(art);
+  }
+
+  function addBot() {
+    const art = $('#bot-template').content.firstElementChild.cloneNode(true);
+    chat.append(art);
+    const content = $('.content', art), label = $('.shimmer', art), elapsed = $('.elapsed', art);
+    const t0 = performance.now();
+    const seconds = () => (performance.now() - t0) / 1000;
+    label.textContent = modelLoaded ? 'Pensando' : 'Cargando el modelo en la GPU';
+    const timer = setInterval(() => {
+      const s = seconds();
+      if (s > 1.5) elapsed.textContent = `${Math.floor(s)} s`;
+      if (s > 8 && modelLoaded) label.textContent = 'Procesando la base de conocimiento';
+    }, 250);
+    let frame = 0, text = '';
+
+    const finish = (state) => {
+      clearInterval(timer);
+      cancelAnimationFrame(frame);
+      art.dataset.state = state;
+      art.setAttribute('aria-busy', 'false');
+    };
+    return {
+      seconds,
+      write(chunk) {
+        if (art.dataset.state === 'thinking') art.dataset.state = 'writing';
+        text += chunk;
+        if (frame) return;
+        frame = requestAnimationFrame(() => {
+          frame = 0;
+          const stick = nearBottom();
+          renderMarkdown(content, text, true);
+          if (stick) toBottom();
+        });
+      },
+      done(metricas, note) {
+        finish('done');
+        renderMarkdown(content, text, false);
+        const parts = [];
+        if (metricas?.modelo) parts.push(metricas.modelo);
+        parts.push(`${seconds().toFixed(1)} s`);
+        if (metricas?.tokens_s) parts.push(`${Math.round(metricas.tokens_s)} tokens/s`);
+        if (metricas?.fin === 'length') parts.push('cortada por límite de longitud');
+        if (note) parts.push(note);
+        $('.meta', art).textContent = parts.join(' · ');
+        const copy = $('.copy', art);
+        if (navigator.clipboard && text) {
+          copy.addEventListener('click', async () => {
+            await navigator.clipboard.writeText(text);
+            const original = copy.innerHTML;
+            copy.innerHTML = CHECK;
+            setTimeout(() => { copy.innerHTML = original; }, 1500);
+          });
+        } else copy.remove();
+        $('.foot', art).hidden = false;
+      },
+      fail(message) {
+        finish('error');
+        renderMarkdown(content, text, false);
+        const err = document.createElement('div');
+        err.className = 'error-text';
+        err.textContent = message;
+        $('.answer', art).insertBefore(err, $('.foot', art));
+      },
+      get text() { return text; },
+    };
+  }
+
+  async function errorMessage(res) {
+    if (res.status === 422) return 'La pregunta debe tener entre 1 y 1000 caracteres.';
+    const body = await res.json().catch(() => ({}));
+    return typeof body.detail === 'string' ? body.detail : `Error ${res.status} del servidor.`;
+  }
+
+  /* ---------- Preguntar (streaming NDJSON) ---------- */
+  async function ask(pregunta) {
+    hero.remove();
+    addUser(pregunta);
+    const bot = addBot();
+    toBottom();
+    controller = new AbortController();
+    setBusy(true);
+    let metricas = null;
+    try {
+      const res = await fetch('/preguntar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pregunta, stream: true }),
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error(await errorMessage(res));
+      const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+      let buffer = '';
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += value;
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (!line) continue;
+          const ev = JSON.parse(line);
+          if (ev.error) throw new Error(ev.error);
+          if (ev.texto) bot.write(ev.texto);
+          if (ev.metricas) metricas = ev.metricas;
+        }
+      }
+      if (!bot.text) throw new Error('El modelo no devolvió texto.');
+      bot.done(metricas);
+    } catch (err) {
+      if (err.name === 'AbortError') bot.text ? bot.done(null, 'detenida') : bot.fail('Consulta cancelada.');
+      else bot.fail(err.message || 'Error de red.');
+    } finally {
+      controller = null;
+      setBusy(false);
+      refreshStatus();
+      q.focus();
+    }
+  }
+
+  function setBusy(busy) {
+    document.body.classList.toggle('busy', busy);
+    send.setAttribute('aria-label', busy ? 'Detener respuesta' : 'Enviar');
+    document.querySelectorAll('.card-q').forEach(c => { c.disabled = busy; });
+    updateSend();
+  }
+  function updateSend() {
+    send.disabled = !controller && !q.value.trim();
+  }
+  function resize() {
+    q.style.height = 'auto';
+    q.style.height = `${q.scrollHeight}px`;
+  }
+
+  /* ---------- Eventos ---------- */
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    if (controller) { controller.abort(); return; }
+    const pregunta = q.value.trim();
+    if (!pregunta) return;
+    q.value = '';
+    resize();
+    ask(pregunta);
+  });
+  q.addEventListener('input', () => { resize(); updateSend(); });
+  q.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+      e.preventDefault();
+      if (!controller) form.requestSubmit();
+    }
+  });
+  document.querySelectorAll('.card-q').forEach(card => {
+    card.addEventListener('click', () => { if (!controller) ask(card.dataset.q); });
+  });
+  $('#reset').addEventListener('click', () => {
+    if (controller) controller.abort();
+    chat.replaceChildren(hero);
+    q.value = '';
+    resize();
+    updateSend();
+    q.focus();
+  });
+
+  refreshStatus();
+  setInterval(refreshStatus, 15000);
+</script>
+</body>
+</html>

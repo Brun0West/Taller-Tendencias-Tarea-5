@@ -1,4 +1,4 @@
-"""Asistente Académico FISI: endpoint /preguntar (sin RAG).
+"""Asistente Académico FISI: página web + endpoint /preguntar (sin RAG).
 
 Cada pregunta se envía al modelo junto con la base de conocimiento completa
 (conocimiento.md) como mensaje de sistema. No hay búsqueda ni embeddings.
@@ -11,13 +11,14 @@ from typing import Annotated, AsyncIterator
 
 import httpx
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, StringConstraints
 
 from .prompt import build_system_prompt
 
 ROOT = Path(__file__).resolve().parents[1]
 KNOWLEDGE_FILE = Path(os.getenv("BASE_CONOCIMIENTO", ROOT / "conocimiento.md"))
+PAGE = Path(__file__).parent / "static" / "index.html"
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
 MODEL = os.getenv("MODELO", "qwen2.5:3b")
 KEEP_ALIVE = os.getenv("KEEP_ALIVE", "30m")
@@ -138,3 +139,23 @@ async def preguntar(p: Pregunta):
                 final = event["metricas"]
     return {"respuesta": "".join(parts), "metricas": final}
 
+
+@app.get("/", include_in_schema=False)
+async def index():
+    return FileResponse(PAGE)
+
+
+@app.get("/estado")
+async def estado():
+    """Estado de Ollama y del modelo, para el indicador de la página.
+
+    gpu: fracción del modelo cargada en VRAM (1.0 = todo en GPU), según /api/ps.
+    """
+    try:
+        response = await app.state.ollama.get(f"{OLLAMA_URL}/api/ps", timeout=5)
+        loaded = response.json().get("models", [])
+    except (httpx.HTTPError, ValueError):
+        return {"ollama": False, "modelo": MODEL, "cargado": False, "gpu": None}
+    model = next((m for m in loaded if MODEL in (m.get("name"), m.get("model"))), None)
+    gpu = round(model["size_vram"] / model["size"], 2) if model and model.get("size") else None
+    return {"ollama": True, "modelo": MODEL, "cargado": model is not None, "gpu": gpu}
