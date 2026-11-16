@@ -39,11 +39,23 @@ Medido de punta a punta sobre `/preguntar` en una laptop con GTX 1650 de 4 GB (i
 
 Son pocas peticiones secuenciales, no una prueba de carga. Las mediciones comparables con protocolo formal están en `benchmarks/`.
 
+## La página
+
+- **Conversaciones** en la barra lateral, agrupadas por fecha, con búsqueda y botón para eliminar (se puede deshacer). Se guardan **solo en el navegador** (`localStorage`, hasta 100). No pasan por el servidor, así que con varios usuarios cada uno ve solo las suyas.
+- **Seguimiento**: el modelo recibe los turnos anteriores de la conversación, así que entiende preguntas como «¿y para 2026-I?». Ver `HISTORIAL_CARACTERES`.
+- **Respuestas en segundo plano**: si cambias de conversación mientras el modelo responde, la respuesta sigue y se guarda; al terminar aparece un aviso. Ollama atiende una petición a la vez, así que una pregunta hecha mientras tanto queda en cola y la página lo indica.
+- **Selector de modelo** (indicador de la barra superior): lista los modelos instalados con una estimación de si caben en la GPU con el contexto configurado (pesos + caché K/V calculada con la arquitectura del modelo). Al elegir uno, la página lo precarga y procesa la base de inmediato, así la primera pregunta no espera ese tiempo.
+- **Métricas sobre la caja de pregunta**: porcentaje de contexto usado, tokens/s (en vivo mientras escribe), tiempo al primer token y duración de la última respuesta.
+- **Estadísticas para nerds** (botón de actividad): GPU, VRAM, temperatura, potencia, CPU, RAM y detalle de la última respuesta, con gráficos en vivo.
+
+Modelos que razonan (por ejemplo `gpt-oss:20b`): su razonamiento se muestra plegado sobre la respuesta. Esos tokens cuentan para el límite de salida, así que a `gpt-oss` se le pide el nivel de razonamiento bajo con un límite de 2048 tokens; a los demás modelos que razonan se les desactiva el razonamiento. `gpt-oss:20b` pesa 13,8 GB: en una GPU de 4 GB corre casi todo en CPU y cada respuesta puede tardar minutos.
+
 ## Configuración (variables de entorno)
 
 | Variable | Por defecto | Para qué |
 |---|---|---|
-| `MODELO` | `qwen2.5:3b` | Modelo de Ollama. `MODELO=llama3.2:3b` para comparar. |
+| `MODELO` | `qwen2.5:3b` | Modelo por defecto, si la petición no elige otro. |
+| `HISTORIAL_CARACTERES` | `6000` | Máximo de historial que se envía al modelo (~1,7k tokens). La base ocupa ~12k de los 16k de contexto; se envían los turnos más recientes que quepan. |
 | `OLLAMA_URL` | `http://127.0.0.1:11434` | Servidor de Ollama. |
 | `NUM_CTX` | `16384` | Ventana de contexto. **No bajarla de ~13 000**: la base ocupa ~12k tokens y el resto quedaría fuera del contexto. |
 | `NUM_PREDICT` | `384` | Máximo de tokens de respuesta. |
@@ -74,15 +86,25 @@ curl -s http://127.0.0.1:8000/preguntar \
 ```
 
 - `pregunta`: de 1 a 1000 caracteres (si no, devuelve 422).
-- `"stream": true` devuelve NDJSON, un objeto por línea: `{"texto": "…"}` mientras se genera y `{"metricas": {…}}` al final. Es lo que usa la página.
+- `modelo` (opcional): cualquiera de los instalados (`GET /modelos`). Si no está instalado devuelve 400.
+- `historial` (opcional): turnos previos, `[{"rol": "usuario" | "asistente", "texto": "…"}]`. El servidor envía solo los más recientes que quepan en `HISTORIAL_CARACTERES`; `metricas.turnos_historial` indica cuántos.
+- `"stream": true` devuelve NDJSON, un objeto por línea: `{"razonamiento": "…"}` (modelos que razonan), `{"texto": "…"}` mientras se genera y `{"metricas": {…}}` al final. Es lo que usa la página.
 - `fin: "length"` significa que la respuesta se cortó al llegar a `NUM_PREDICT`.
-- Errores: `503` si Ollama no responde y `502` si Ollama devuelve un error (por ejemplo, modelo no descargado).
+- Errores: `503` si Ollama no responde y `502` si Ollama devuelve un error.
 
-### `GET /estado`
+### `GET /modelos`
+
+Modelos instalados que generan texto: parámetros, cuantización, tamaño, `vram_estimada`, `ajuste` (`gpu` = cabe entero, `parcial` = se reparte entre GPU y CPU, `cpu` = casi todo en CPU), `razona` y si está `cargado`. La estimación es aproximada; la cifra real la da `GET /estado` una vez cargado.
+
+### `POST /precargar`
+
+`{"modelo": "llama3.2:3b"}`: carga el modelo y procesa la base pidiendo un solo token, para que la primera pregunta real sea rápida. Devuelve `carga_s`, `prefill_s` y `total_s`. La página lo llama al cambiar de modelo.
+
+### `GET /estado?modelo=…`
 
 `{"ollama": true, "modelo": "qwen2.5:3b", "cargado": true, "gpu": 1.0}`. `gpu` es la fracción del modelo en VRAM según Ollama: `1.0` = todo en GPU, `0` = solo CPU.
 
-### `GET /metricas`
+### `GET /metricas?modelo=…`
 
 Datos del panel **Estadísticas para nerds** (botón de actividad en la barra superior de la página):
 
@@ -96,13 +118,15 @@ Datos del panel **Estadísticas para nerds** (botón de actividad en la barra su
 
 | Archivo | Contenido |
 |---|---|
-| `main.py` | FastAPI: `/`, `/preguntar`, `/estado`, `/metricas`. |
+| `main.py` | FastAPI: `/`, `/preguntar`, `/modelos`, `/precargar`, `/estado`, `/metricas`. |
+| `modelos.py` | Reglas por modelo: estimación de VRAM y parámetros para modelos que razonan. |
 | `prompt.py` | Prompt de sistema. **Provisional**: Bruno lo reemplaza con las restricciones temáticas y anti-inyección. |
 | `hardware.py` | Lecturas de GPU y sistema para `/metricas`. |
 | `static/index.html` | Página completa (HTML, CSS y JS sin dependencias ni paso de build). |
 
 ## Notas
 
-- Cada pregunta es independiente: no se envía historial de la conversación.
+- La base va siempre primero y sin cambios: así Ollama reutiliza la base ya procesada aunque cambie el historial. Cambiar de modelo obliga a procesarla de nuevo (en la GTX 1650 de 4 GB solo cabe un modelo de 3B a la vez).
+- Para el despliegue con 20 usuarios conviene limitar qué modelos se pueden elegir: hoy cualquier usuario puede pedir cualquier modelo instalado, y uno grande ralentizaría a todos.
 - La respuesta del modelo se muestra como texto con formato Markdown básico (negritas, listas). Se construye con nodos DOM, nunca con `innerHTML`, para que una respuesta manipulada no pueda inyectar HTML en la página.
 - Lo que queda pendiente para el equipo: integrar el prompt de Bruno en `prompt.py` y que Adrian repita sus mediciones sobre `/preguntar` (las métricas de la respuesta ya incluyen tiempo al primer token, prefill y tokens/s).
